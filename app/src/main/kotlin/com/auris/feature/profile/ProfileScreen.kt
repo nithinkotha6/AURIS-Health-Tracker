@@ -8,21 +8,28 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,12 +37,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -46,12 +53,7 @@ import com.auris.ui.theme.AurisColors
 import kotlinx.coroutines.flow.collectLatest
 
 /**
- * ProfileScreen — Phase 10+ stub with Health Connect toggle.
- *
- * Shows:
- * - Basic header
- * - Health Connect sync toggle that reflects current permission state
- *   and allows the user to open the system permission flow.
+ * ProfileScreen — Health Connect integration + export/backup.
  */
 @Composable
 fun ProfileScreen(
@@ -68,13 +70,10 @@ fun ProfileScreen(
         HealthPermission.getReadPermission(SleepSessionRecord::class)
     )
 
-    // PermissionController.createRequestPermissionResultContract() is the correct API for
-    // Health Connect 1.0.0. HealthConnectClient.createRequestPermissionResultContract() was
-    // only added in 1.1.x.
+    // HC 1.1.0: use HealthConnectClient.createRequestPermissionResultContract()
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract()
-    ) { _: Set<String> ->
-        // After the user returns from HC permission screen, refresh state.
+        contract = HealthConnectClient.createRequestPermissionResultContract()
+    ) { granted: Set<String> ->
         viewModel.refresh()
     }
 
@@ -113,68 +112,61 @@ fun ProfileScreen(
                 )
             }
 
-            // Health Connect section
+            // ── Health Connect section ──────────────────────────────────────
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
-                    .background(AurisColors.BgSecondary)
+                    .fillMaxWidth()
+                    .background(AurisColors.BgSecondary, RoundedCornerShape(12.dp))
                     .padding(horizontal = 16.dp, vertical = 16.dp)
             ) {
+                // Title row
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxSize()
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Health Connect",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = AurisColors.LabelPrimary
-                        )
-                        Text(
-                            text = if (state.isAvailable) {
-                                if (state.hasAllPermissions) "Syncing steps, calories & sleep." else "Tap to grant access to steps, calories & sleep."
-                            } else {
-                                "Health Connect not available on this device."
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AurisColors.LabelSecondary
+                    Icon(
+                        imageVector = Icons.Filled.FavoriteBorder,
+                        contentDescription = null,
+                        tint = AurisColors.Red,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Health Connect",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = AurisColors.LabelPrimary
+                    )
+                    if (state.hasAllPermissions) {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = "Connected",
+                            tint = AurisColors.Green,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    Switch(
-                        checked = state.hasAllPermissions && state.isAvailable,
-                        enabled = state.isAvailable,
-                        onCheckedChange = { checked ->
-                            if (checked && state.isAvailable) {
-                                // Launch Health Connect's own permission UI
-                                permissionLauncher.launch(requiredPermissions)
-                            } else {
-                                viewModel.refresh()
-                            }
-                        }
-                    )
                 }
 
+                // Status description
+                Text(
+                    text = when {
+                        !state.isAvailable ->
+                            "Health Connect is not installed on this device. Install it to sync Fitbit steps, calories & sleep."
+                        state.needsProviderUpdate ->
+                            "Health Connect needs an update. Tap below to grant permissions — you may be prompted to update first."
+                        state.hasAllPermissions ->
+                            "✓ Syncing steps, active calories & sleep from Health Connect."
+                        else ->
+                            "Tap below to grant AURIS access to your steps, active calories & sleep data."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AurisColors.LabelSecondary
+                )
+
+                // Always-visible action button
                 if (!state.isAvailable) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Favorite,
-                            contentDescription = null,
-                            tint = AurisColors.Red
-                        )
-                        Text(
-                            text = "Install Health Connect to sync Fitbit and burn-adjusted RDAs.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AurisColors.LabelTertiary,
-                            modifier = Modifier.padding(start = 6.dp)
-                        )
-                    }
-                    OutlinedButton(
+                    // HC not installed: open Play Store
+                    Button(
                         onClick = {
-                            // Open Health Connect on Play Store to install / open
                             val intent = Intent(Intent.ACTION_VIEW).apply {
                                 data = Uri.parse("market://details?id=com.google.android.apps.healthdata")
                                 setPackage("com.android.vending")
@@ -188,18 +180,49 @@ fun ProfileScreen(
                                 )
                             }
                         },
-                        modifier = Modifier.padding(top = 4.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = AurisColors.Red),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Get Health Connect")
+                        Text("Install Health Connect", color = Color.White)
+                    }
+                } else if (state.hasAllPermissions) {
+                    // Already connected: offer to open HC settings to revoke
+                    OutlinedButton(
+                        onClick = {
+                            try {
+                                context.startActivity(
+                                    context.packageManager
+                                        .getLaunchIntentForPackage("com.google.android.apps.healthdata")
+                                        ?: Intent(Intent.ACTION_VIEW,
+                                            Uri.parse("market://details?id=com.google.android.apps.healthdata"))
+                                )
+                            } catch (_: Exception) { }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Manage in Health Connect")
+                    }
+                } else {
+                    // HC installed but not permitted: launch HC permission dialog
+                    Button(
+                        onClick = { permissionLauncher.launch(requiredPermissions) },
+                        colors = ButtonDefaults.buttonColors(containerColor = AurisColors.Blue),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Grant Health Connect Access", color = Color.White)
                     }
                 }
             }
 
-            // Phase 12: Export report
+            // ── Export report ───────────────────────────────────────────────
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
-                    .background(AurisColors.BgSecondary)
+                    .fillMaxWidth()
+                    .background(AurisColors.BgSecondary, RoundedCornerShape(12.dp))
                     .padding(horizontal = 16.dp, vertical = 16.dp)
             ) {
                 Text(
@@ -212,16 +235,20 @@ fun ProfileScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = AurisColors.LabelSecondary
                 )
-                OutlinedButton(onClick = { profileViewModel.exportReport() }) {
+                OutlinedButton(
+                    onClick = { profileViewModel.exportReport() },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
                     Text("Export PDF")
                 }
             }
 
-            // Phase 12: Backup & Restore
+            // ── Backup & Restore ────────────────────────────────────────────
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
-                    .background(AurisColors.BgSecondary)
+                    .fillMaxWidth()
+                    .background(AurisColors.BgSecondary, RoundedCornerShape(12.dp))
                     .padding(horizontal = 16.dp, vertical = 16.dp)
             ) {
                 Text(
@@ -235,14 +262,22 @@ fun ProfileScreen(
                     color = AurisColors.LabelSecondary
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { profileViewModel.backupStub() }) {
+                    OutlinedButton(
+                        onClick = { profileViewModel.backupStub() },
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
                         Text("Backup")
                     }
-                    OutlinedButton(onClick = { profileViewModel.restoreStub() }) {
+                    OutlinedButton(
+                        onClick = { profileViewModel.restoreStub() },
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
                         Text("Restore")
                     }
                 }
             }
+
+            Spacer(Modifier.height(40.dp))
         }
 
         SnackbarHost(
