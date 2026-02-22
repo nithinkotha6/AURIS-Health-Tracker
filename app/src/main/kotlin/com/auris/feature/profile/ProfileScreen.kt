@@ -1,29 +1,230 @@
 package com.auris.feature.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.StepsRecord
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.auris.ui.theme.AurisColors
+import kotlinx.coroutines.flow.collectLatest
 
-/** ProfileScreen — Phase 12 stub */
+/**
+ * ProfileScreen — Phase 10+ stub with Health Connect toggle.
+ *
+ * Shows:
+ * - Basic header
+ * - Health Connect sync toggle that reflects current permission state
+ *   and allows the user to open the system permission flow.
+ */
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(
+    viewModel: PermissionFlowViewModel = hiltViewModel(),
+    profileViewModel: ProfileViewModel = hiltViewModel()
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Health Connect permission launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        // After the user returns from the permission screen, refresh state.
+        viewModel.refresh()
+    }
+
+    val requiredPermissions = setOf(
+        HealthPermission.getReadPermission(StepsRecord::class),
+        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(SleepSessionRecord::class)
+    )
+
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+        profileViewModel.events.collectLatest { event ->
+            snackbarHostState.showSnackbar(event)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(AurisColors.BgPrimary),
-        contentAlignment = Alignment.Center
+            .background(AurisColors.BgPrimary)
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(horizontal = 24.dp, vertical = 24.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("👤", fontSize = 48.sp)
-            Text("Profile", fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                color = AurisColors.LabelPrimary)
-            Text("Coming in Phase 12", fontSize = 13.sp, color = AurisColors.LabelTertiary)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header
+            Column {
+                Text(
+                    text = "Profile",
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AurisColors.LabelPrimary
+                )
+                Text(
+                    text = "Configure data sources and privacy.",
+                    fontSize = 14.sp,
+                    color = AurisColors.LabelSecondary
+                )
+            }
+
+            // Health Connect section
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .background(AurisColors.BgSecondary)
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Health Connect",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = AurisColors.LabelPrimary
+                        )
+                        Text(
+                            text = if (state.isAvailable) {
+                                if (state.hasAllPermissions) "Syncing steps, calories & sleep." else "Tap to grant access to steps, calories & sleep."
+                            } else {
+                                "Health Connect not available on this device."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AurisColors.LabelSecondary
+                        )
+                    }
+                    Switch(
+                        checked = state.hasAllPermissions && state.isAvailable,
+                        enabled = state.isAvailable,
+                        onCheckedChange = { checked ->
+                            if (checked && state.isAvailable) {
+                                // Launch Health Connect system permission UI.
+                                permissionLauncher.launch(requiredPermissions.toTypedArray())
+                            } else {
+                                // Revocation is done from system settings; just refresh.
+                                viewModel.refresh()
+                            }
+                        }
+                    )
+                }
+
+                if (!state.isAvailable) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Favorite,
+                            contentDescription = null,
+                            tint = AurisColors.Red
+                        )
+                        Spacer(modifier = Modifier.height(0.dp))
+                        Text(
+                            text = "Install Health Connect to unlock burn-adjusted RDAs.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AurisColors.LabelTertiary,
+                            modifier = Modifier.padding(start = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            // Phase 12: Export report
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .background(AurisColors.BgSecondary)
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                Text(
+                    text = "Export report",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AurisColors.LabelPrimary
+                )
+                Text(
+                    text = "Generate a PDF summary of your nutrition and habits.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AurisColors.LabelSecondary
+                )
+                OutlinedButton(onClick = { profileViewModel.exportReport() }) {
+                    Text("Export PDF")
+                }
+            }
+
+            // Phase 12: Backup & Restore
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .background(AurisColors.BgSecondary)
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                Text(
+                    text = "Backup & restore",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AurisColors.LabelPrimary
+                )
+                Text(
+                    text = "Save or restore your data (Phase 12 stub).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AurisColors.LabelSecondary
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { profileViewModel.backupStub() }) {
+                        Text("Backup")
+                    }
+                    OutlinedButton(onClick = { profileViewModel.restoreStub() }) {
+                        Text("Restore")
+                    }
+                }
+            }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }

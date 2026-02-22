@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.auris.feature.diary.DiaryScreen
+import com.auris.feature.habits.HabitScreen
 import com.auris.feature.home.HomeScreen
 import com.auris.feature.log.LogScreen
 import com.auris.feature.overview.OverviewScreen
@@ -44,19 +45,30 @@ fun AurisNavHost(navController: NavHostController) {
                 DiaryScreen()
             }
             composable(Screen.Overview.route) {
+                OverviewScreen(navController = navController)
+            }
+            composable(Screen.Vitamins.route) {
                 VitaminsScreen(navController = navController)
+            }
+            composable(Screen.Habits.route) {
+                HabitScreen()
             }
             composable(Screen.Profile.route) {
                 ProfileScreen()
             }
-            composable(Screen.Confirmation.route) {
-                OverviewScreen(navController = navController)
+            composable(
+                route = Screen.Confirmation.route,
+                deepLinks = listOf(androidx.navigation.navDeepLink { uriPattern = "auris://log?v=1&meal={meal}&items={items}" })
+            ) { backStackEntry ->
+                val encodedUri = backStackEntry.arguments?.getString(Screen.Confirmation.ARG_ENCODED_URI)
+                LogScreen(encodedUri = encodedUri)
             }
-            composable(Screen.SharedText.route) {
-                OverviewScreen(navController = navController)
+            composable(Screen.SharedText.route) { backStackEntry ->
+                val encodedText = backStackEntry.arguments?.getString(Screen.SharedText.ARG_ENCODED_TEXT)
+                LogScreen(encodedSharedText = encodedText)
             }
             composable(Screen.VitaminDetail.route) {
-                OverviewScreen(navController = navController)
+                VitaminsScreen(navController = navController)
             }
         }
 

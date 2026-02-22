@@ -24,6 +24,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.auris.ui.components.*
 import com.auris.ui.theme.AurisColors
 
@@ -31,8 +36,40 @@ import com.auris.ui.theme.AurisColors
    HOME SCREEN — Apple HIG layout (synced to auris-hig-final.jsx)
    ────────────────────────────────────────────────────────*/
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    viewModel: HomeViewModel = hiltViewModel(),
+    syncViewModel: SyncViewModel = hiltViewModel()
+) {
+    val totalCalories by viewModel.totalCalories.collectAsStateWithLifecycle()
+    val totalProtein  by viewModel.totalProtein.collectAsStateWithLifecycle()
+    val foodLog       by viewModel.todayFoodLog.collectAsStateWithLifecycle()
+    val nudge         by viewModel.nudge.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Trigger Health Connect sync on foreground (Phase 10).
+    DisposableEffect(lifecycleOwner, syncViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                syncViewModel.onForeground()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     var timeFilter by remember { mutableStateOf("Day") }
+
+    // Derive macro display values from real data
+    val proteinGoal  = 150
+    val carbsGoal    = 280
+    val fatGoal      = 65
+    val calorieGoal  = 2500
+    val caloriesLeft = (calorieGoal - totalCalories).coerceAtLeast(0)
+    val proteinPct   = ((totalProtein / proteinGoal) * 100).toInt().coerceIn(0, 100)
+    val totalCarbs   = foodLog.map { it.carbsG }.sum()
+    val totalFat     = foodLog.map { it.fatG }.sum()
+    val carbsPct     = ((totalCarbs / carbsGoal) * 100).toInt().coerceIn(0, 100)
+    val fatPct       = ((totalFat / fatGoal) * 100).toInt().coerceIn(0, 100)
+    val caloriePct   = ((totalCalories.toFloat() / calorieGoal) * 100).toInt().coerceIn(0, 100)
 
     Column(
         modifier = Modifier
@@ -87,7 +124,18 @@ fun HomeScreen() {
             }
         }
 
-        Spacer(Modifier.height(32.dp))   // mb-8 = 32dp
+        Spacer(Modifier.height(24.dp))
+
+        // ── 2.5 Predictive Nudge ────────────────────────────────────
+        nudge?.let {
+            com.auris.feature.home.components.PredictiveNudgeCard(nudge = it)
+            Spacer(Modifier.height(24.dp))
+        }
+
+        // Phase 12: Wellbeing feedback (e.g. show after 9 PM when implemented)
+        com.auris.feature.home.components.WellbeingFeedbackCard()
+
+        Spacer(Modifier.height(8.dp))   // Adjusted from mb-8=32dp to accommodate nudge
 
         // ── 3. Hero Row: Water | Body | Steps ──────────────────────
         Box(
@@ -352,26 +400,26 @@ fun HomeScreen() {
 
         Spacer(Modifier.height(16.dp))
 
-        // Row 5: Calories donut + Macros + Streak
+        // Row 5: Calories donut + Macros + Streak (connected to real data)
         WhiteCard(modifier = Modifier.fillMaxWidth()) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
                 modifier = Modifier.padding(20.dp)
             ) {
-                // Calories donut
+                // Calories donut — live from repository
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.size(100.dp)
                 ) {
                     RingWidget(
-                        pct         = 55,
+                        pct         = caloriePct,
                         color       = AurisColors.Orange,
                         size        = 100.dp,
                         strokeWidth = 8.dp
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("1,824", fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                            Text("%,d".format(caloriesLeft), fontSize = 20.sp, fontWeight = FontWeight.Bold,
                                 color = AurisColors.LabelPrimary, letterSpacing = (-0.5).sp)
                             Text("kcal left", fontSize = 11.sp, fontWeight = FontWeight.Medium,
                                 color = AurisColors.LabelSecondary, letterSpacing = 0.1.sp)
@@ -379,15 +427,15 @@ fun HomeScreen() {
                     }
                 }
 
-                // Macros + streak
+                // Macros + streak — live from repository
                 Column(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.weight(1f)
                 ) {
                     listOf(
-                        Triple("Protein", Pair("82g", "150g"),  Pair(54, AurisColors.Blue)),
-                        Triple("Carbs",   Pair("210g", "280g"), Pair(75, AurisColors.Green)),
-                        Triple("Fat",     Pair("38g", "65g"),   Pair(58, AurisColors.Orange)),
+                        Triple("Protein", Pair("${totalProtein.toInt()}g", "${proteinGoal}g"),  Pair(proteinPct, AurisColors.Blue)),
+                        Triple("Carbs",   Pair("${totalCarbs.toInt()}g", "${carbsGoal}g"), Pair(carbsPct, AurisColors.Green)),
+                        Triple("Fat",     Pair("${totalFat.toInt()}g", "${fatGoal}g"),   Pair(fatPct, AurisColors.Orange)),
                     ).forEach { (label, amounts, bar) ->
                         Column {
                             Row(

@@ -127,8 +127,8 @@ fun AurisBottomNav(
                 // Habits
                 NavTabItem(
                     label = "Habits", icon = Icons.Outlined.CheckBox,
-                    isActive = currentRoute == Screen.Diary.route,
-                    onClick = { onTabSelected(AurisTab("Habits", Screen.Diary.route)) },
+                    isActive = currentRoute == Screen.Habits.route,
+                    onClick = { onTabSelected(AurisTab("Habits", Screen.Habits.route)) },
                     modifier = Modifier.weight(1f)
                 )
 
