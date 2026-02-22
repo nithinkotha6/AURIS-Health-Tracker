@@ -44,6 +44,7 @@ fun HomeScreen(
     val totalProtein  by viewModel.totalProtein.collectAsStateWithLifecycle()
     val foodLog       by viewModel.todayFoodLog.collectAsStateWithLifecycle()
     val nudge         by viewModel.nudge.collectAsStateWithLifecycle()
+    val burnData      by syncViewModel.lastBurnData.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Trigger Health Connect sync on foreground (Phase 10).
@@ -63,13 +64,25 @@ fun HomeScreen(
     val carbsGoal    = 280
     val fatGoal      = 65
     val calorieGoal  = 2500
-    val caloriesLeft = (calorieGoal - totalCalories).coerceAtLeast(0)
+    val burnCalories = (burnData?.activeCalories ?: 0f).toInt()
+    val caloriesLeft = (calorieGoal - totalCalories + burnCalories).coerceAtLeast(0)
     val proteinPct   = ((totalProtein / proteinGoal) * 100).toInt().coerceIn(0, 100)
     val totalCarbs   = foodLog.map { it.carbsG }.sum()
     val totalFat     = foodLog.map { it.fatG }.sum()
     val carbsPct     = ((totalCarbs / carbsGoal) * 100).toInt().coerceIn(0, 100)
     val fatPct       = ((totalFat / fatGoal) * 100).toInt().coerceIn(0, 100)
     val caloriePct   = ((totalCalories.toFloat() / calorieGoal) * 100).toInt().coerceIn(0, 100)
+
+    // Derived HC display values (null = HC not connected yet)
+    val stepsCount   = burnData?.steps
+    val stepsLabel   = stepsCount?.let { "%,d".format(it) } ?: "--"
+    val stepsPct     = stepsCount?.let { (it.toFloat() / 10_000 * 100).toInt().coerceIn(0, 100) } ?: 0
+    val sleepHours   = burnData?.sleepHours
+    val sleepLabel   = sleepHours?.let {
+        val h = it.toInt()
+        val m = ((it - h) * 60).toInt()
+        if (m > 0) "${h}h ${m}m" else "${h}h"
+    } ?: "--"
 
     Column(
         modifier = Modifier
@@ -168,9 +181,9 @@ fun HomeScreen(
             // Steps column (right)
             LiquidColumn(
                 label       = "Steps",
-                value       = "6,500",
+                value       = stepsLabel,
                 unit        = "Steps",
-                pct         = 65,
+                pct         = stepsPct,
                 gradTop     = Color(0xFF86EFAC),    // #86EFAC
                 gradBot     = Color(0xFF16A34A),    // #16A34A
                 accentColor = AurisColors.Green,
@@ -229,12 +242,12 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxSize().padding(20.dp)
                 ) {
-                    RingWidget(pct = 65, color = AurisColors.Green, size = 70.dp, strokeWidth = 8.dp) {
+                    RingWidget(pct = stepsPct, color = AurisColors.Green, size = 70.dp, strokeWidth = 8.dp) {
                         Icon(Icons.Filled.DirectionsWalk, contentDescription = null,
                             tint = AurisColors.Green, modifier = Modifier.size(24.dp))
                     }
                     Spacer(Modifier.height(16.dp))
-                    Text("6,500", fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                    Text(stepsLabel, fontSize = 17.sp, fontWeight = FontWeight.Bold,
                         color = AurisColors.LabelPrimary, letterSpacing = (-0.2).sp)
                     Text("Steps", fontSize = 12.sp, fontWeight = FontWeight.Medium,
                         color = AurisColors.LabelSecondary)
@@ -251,7 +264,7 @@ fun HomeScreen(
                     Icon(Icons.Filled.Bedtime, contentDescription = null,
                         tint = AurisColors.Purple, modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(20.dp))
-                    Text("4h 55m", fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                    Text(sleepLabel, fontSize = 17.sp, fontWeight = FontWeight.Bold,
                         color = AurisColors.LabelPrimary, letterSpacing = (-0.2).sp)
                     Text("Sleep", fontSize = 12.sp, fontWeight = FontWeight.Medium,
                         color = AurisColors.LabelSecondary)

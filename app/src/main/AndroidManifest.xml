@@ -51,6 +51,11 @@
 
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <!-- Health Connect: app must declare ACTION_VIEW_PERMISSION_USAGE so HC
+                 can show a permissions rationale screen before the grant dialog -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
         </activity>
         <!-- ── FileProvider (Phase 8 — secure image sharing with AI apps) ─ -->
         <provider
@@ -61,10 +66,7 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
-        </provider> <!-- Health Connect activity declaration (Phase 10) -->
-        <activity
-            android:name="androidx.health.connect.client.PermissionController"
-            android:exported="true" />
+        </provider>
     </application>
 
 </manifest>
