@@ -59,30 +59,33 @@ fun HomeScreen(
     }
     var timeFilter by remember { mutableStateOf("Day") }
 
-    // Derive macro display values from real data
+    // Derive macro display values — dummy defaults until food is logged
     val proteinGoal  = 150
     val carbsGoal    = 280
     val fatGoal      = 65
     val calorieGoal  = 2500
     val burnCalories = (burnData?.activeCalories ?: 0f).toInt()
-    val caloriesLeft = (calorieGoal - totalCalories + burnCalories).coerceAtLeast(0)
-    val proteinPct   = ((totalProtein / proteinGoal) * 100).toInt().coerceIn(0, 100)
-    val totalCarbs   = foodLog.map { it.carbsG }.sum()
-    val totalFat     = foodLog.map { it.fatG }.sum()
-    val carbsPct     = ((totalCarbs / carbsGoal) * 100).toInt().coerceIn(0, 100)
-    val fatPct       = ((totalFat / fatGoal) * 100).toInt().coerceIn(0, 100)
-    val caloriePct   = ((totalCalories.toFloat() / calorieGoal) * 100).toInt().coerceIn(0, 100)
+    // Dummy preview macros: protein=100g, carbs=75g, fat=22g
+    val displayProtein = if (totalProtein > 0f) totalProtein else 100f
+    val displayCarbs   = if (totalCalories > 0f) foodLog.map { it.carbsG }.sum() else 75f
+    val displayFat     = if (totalCalories > 0f) foodLog.map { it.fatG }.sum()   else 22f
+    val displayCals    = if (totalCalories > 0f) totalCalories else 1250f
+    val caloriesLeft = (calorieGoal - displayCals.toInt() + burnCalories).coerceAtLeast(0)
+    val proteinPct   = ((displayProtein / proteinGoal) * 100).toInt().coerceIn(0, 100)
+    val carbsPct     = ((displayCarbs / carbsGoal) * 100).toInt().coerceIn(0, 100)
+    val fatPct       = ((displayFat / fatGoal) * 100).toInt().coerceIn(0, 100)
+    val caloriePct   = ((displayCals / calorieGoal) * 100).toInt().coerceIn(0, 100)
 
-    // Derived HC display values (null = HC not connected yet)
-    val stepsCount   = burnData?.steps
-    val stepsLabel   = stepsCount?.let { "%,d".format(it) } ?: "--"
-    val stepsPct     = stepsCount?.let { (it.toFloat() / 10_000 * 100).toInt().coerceIn(0, 100) } ?: 0
-    val sleepHours   = burnData?.sleepHours
-    val sleepLabel   = sleepHours?.let {
-        val h = it.toInt()
-        val m = ((it - h) * 60).toInt()
-        if (m > 0) "${h}h ${m}m" else "${h}h"
-    } ?: "--"
+    // ── Dummy preview values (shown until HC delivers real data) ───────
+    // Steps: 6,500 / 10,000 = 65%
+    val stepsCount   = burnData?.steps ?: 6_500
+    val stepsLabel   = "%,d".format(stepsCount)
+    val stepsPct     = (stepsCount.toFloat() / 10_000 * 100).toInt().coerceIn(0, 100)
+    // Sleep: 7h 30m
+    val sleepHoursRaw = burnData?.sleepHours ?: 7.5f
+    val sleepH = sleepHoursRaw.toInt()
+    val sleepM = ((sleepHoursRaw - sleepH) * 60).toInt()
+    val sleepLabel = if (sleepM > 0) "${sleepH}h ${sleepM}m" else "${sleepH}h"
 
     Column(
         modifier = Modifier
@@ -274,7 +277,7 @@ fun HomeScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Row 2: Heart Rate card (ECG waveform)
+        // Row 2: Heart Rate card (ECG waveform — left half filled, blinking dot at end)
         WhiteCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(
@@ -302,10 +305,11 @@ fun HomeScreen(
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                // ECG Waveform
-                EcgWaveform(modifier = Modifier.fillMaxWidth().height(70.dp))
+                // ECG: only the left half is drawn (filled up to 50%), red dot blinks at end
+                HalfFillEcgWithDot(
+                    modifier = Modifier.fillMaxWidth().height(70.dp)
+                )
                 Spacer(Modifier.height(8.dp))
-                // X-axis labels
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
@@ -354,62 +358,77 @@ fun HomeScreen(
                 }
             }
 
-            // Readiness + Recovery arcs
+            // Readiness + Recovery — moon-shaped semicircular arcs, centered
             WhiteCard(modifier = Modifier.weight(1f).heightIn(min = 140.dp)) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxSize().padding(16.dp)
+                    modifier = Modifier.fillMaxSize().padding(12.dp)
                 ) {
-                    ArcStat(label = "Readiness", value = 57, color = Color(0xFFFFCC00))
-                    ArcStat(label = "Recovery",  value = 77, color = AurisColors.Green)
+                    MoonArcStat(label = "Readiness", value = 57, color = Color(0xFFFFCC00))
+                    MoonArcStat(label = "Recovery",  value = 77, color = AurisColors.Green)
                 }
             }
         }
 
         Spacer(Modifier.height(16.dp))
 
-        // Row 4: Water bar — flat white card with inline thin bar
-        WhiteCard(modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
-            ) {
-                Text("Water", fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                    color = AurisColors.LabelPrimary, letterSpacing = (-0.2).sp,
-                    modifier = Modifier.width(60.dp))
-                // Thin 4dp progress bar
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        .padding(horizontal = 12.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(Color(0x143C3C43))
+        // Row 4: Water bar — thick 8dp bar with liquid wave shimmer animation
+        WhiteCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    var visible by remember { mutableStateOf(false) }
-                    LaunchedEffect(Unit) { visible = true }
-                    val animW by animateFloatAsState(
-                        targetValue   = if (visible) 0.70f else 0f,
-                        animationSpec = tween(1200, easing = FastOutSlowInEasing),
-                        label         = "waterBar"
-                    )
+                    // Animated liquid fill bar
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(animW)
-                            .fillMaxHeight()
+                            .weight(1f)
+                            .height(8.dp)
                             .clip(RoundedCornerShape(999.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(AurisColors.Teal, AurisColors.Blue)
+                            .background(Color(0x1A3C3C43))
+                    ) {
+                        var visible by remember { mutableStateOf(false) }
+                        LaunchedEffect(Unit) { visible = true }
+                        val animW by animateFloatAsState(
+                            targetValue   = if (visible) 0.70f else 0f,
+                            animationSpec = tween(1400, easing = FastOutSlowInEasing),
+                            label         = "waterBar"
+                        )
+                        // Wave shimmer offset
+                        val waveOffset by rememberInfiniteTransition(label = "wave").animateFloat(
+                            initialValue  = 0f,
+                            targetValue   = 1f,
+                            animationSpec = infiniteRepeatable(
+                                tween(1800, easing = LinearEasing), RepeatMode.Restart
+                            ),
+                            label = "waveShift"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(animW)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colorStops = arrayOf(
+                                            0f   to Color(0xFF2563EB),
+                                            (waveOffset * 0.5f + 0.1f).coerceIn(0.1f, 0.5f) to Color(0xFF60A5FA),
+                                            (waveOffset * 0.5f + 0.5f).coerceIn(0.5f, 0.9f) to Color(0xFF2563EB),
+                                            1f   to Color(0xFF38BDF8),
+                                        )
+                                    )
                                 )
-                            )
-                    )
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text("2.5 / 3.5 L", fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                        color = AurisColors.LabelSecondary)
                 }
-                Text("3.5 L", fontSize = 15.sp, fontWeight = FontWeight.Normal,
+                Spacer(Modifier.height(6.dp))
+                Text("Water", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                     color = AurisColors.LabelSecondary)
             }
-        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -446,9 +465,9 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     listOf(
-                        Triple("Protein", Pair("${totalProtein.toInt()}g", "${proteinGoal}g"),  Pair(proteinPct, AurisColors.Blue)),
-                        Triple("Carbs",   Pair("${totalCarbs.toInt()}g", "${carbsGoal}g"), Pair(carbsPct, AurisColors.Green)),
-                        Triple("Fat",     Pair("${totalFat.toInt()}g", "${fatGoal}g"),   Pair(fatPct, AurisColors.Orange)),
+                        Triple("Protein", Pair("${displayProtein.toInt()}g", "${proteinGoal}g"),  Pair(proteinPct, AurisColors.Blue)),
+                        Triple("Carbs",   Pair("${displayCarbs.toInt()}g", "${carbsGoal}g"), Pair(carbsPct, AurisColors.Green)),
+                        Triple("Fat",     Pair("${displayFat.toInt()}g", "${fatGoal}g"),   Pair(fatPct, AurisColors.Orange)),
                     ).forEach { (label, amounts, bar) ->
                         Column {
                             Row(
@@ -646,7 +665,93 @@ fun BodySilhouette(modifier: Modifier = Modifier) {
     }
 }
 
-/* ── ECG Waveform ────────────────────────────────────────────────── */
+/* ── Half-Fill ECG with blinking red dot (heart rate "live" indicator) ── */
+@Composable
+fun HalfFillEcgWithDot(modifier: Modifier = Modifier) {
+    // Blinking dot pulse animation
+    val dotAlpha by rememberInfiniteTransition(label = "blink").animateFloat(
+        initialValue  = 1f,
+        targetValue   = 0.15f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(700, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dotAlpha"
+    )
+
+    // All ECG points in a 180-wide coordinate space
+    val allPoints = listOf(
+        0f to 40f, 20f to 40f, 25f to 30f, 30f to 60f, 35f to 15f,
+        40f to 45f, 45f to 40f, 60f to 40f, 65f to 25f, 70f to 55f,
+        75f to 20f, 80f to 40f, 95f to 40f, 100f to 20f, 105f to 70f,
+        110f to 10f, 115f to 50f, 120f to 40f, 140f to 40f, 145f to 35f,
+        150f to 50f, 155f to 40f, 180f to 40f
+    )
+    // Only draw up to x=95 (first half of the chart)
+    val halfPoints = allPoints.filter { it.first <= 95f }
+    val dotX = 95f   // endpoint of the filled section
+    val dotY = 40f
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val scaleX = w / 180f
+        val scaleY = h / 80f
+
+        // Draw filled left-half ECG line
+        val path = Path().apply {
+            halfPoints.forEachIndexed { idx, (x, y) ->
+                val sx = x * scaleX
+                val sy = y * scaleY
+                if (idx == 0) moveTo(sx, sy) else lineTo(sx, sy)
+            }
+        }
+        drawPath(
+            path  = path,
+            brush = Brush.horizontalGradient(
+                listOf(AurisColors.Red, AurisColors.Red2),
+                endX = dotX * scaleX
+            ),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = 2.dp.toPx(),
+                cap   = StrokeCap.Round,
+                join  = StrokeJoin.Round
+            )
+        )
+
+        // Draw faded right-half baseline
+        val baseline = Path().apply {
+            moveTo(dotX * scaleX, dotY * scaleY)
+            lineTo(w, dotY * scaleY)
+        }
+        drawPath(
+            path  = baseline,
+            color = Color(0x303C3C43),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = 1.5f.dp.toPx(),
+                cap   = StrokeCap.Round
+            )
+        )
+
+        // Draw blinking dot at endpoint
+        val cx = dotX * scaleX
+        val cy = dotY * scaleY
+        // outer glow
+        drawCircle(
+            color  = AurisColors.Red.copy(alpha = dotAlpha * 0.25f),
+            radius = 10.dp.toPx(),
+            center = Offset(cx, cy)
+        )
+        // solid dot
+        drawCircle(
+            color  = AurisColors.Red.copy(alpha = dotAlpha),
+            radius = 4.dp.toPx(),
+            center = Offset(cx, cy)
+        )
+    }
+}
+
+/* ── Legacy EcgWaveform (kept for reference) ─────────────────────── */
 @Composable
 fun EcgWaveform(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -654,7 +759,6 @@ fun EcgWaveform(modifier: Modifier = Modifier) {
         val h = size.height
         val scaleX = w / 180f
         val scaleY = h / 80f
-
         val points = listOf(
             0f to 40f, 20f to 40f, 25f to 30f, 30f to 60f, 35f to 15f,
             40f to 45f, 45f to 40f, 60f to 40f, 65f to 25f, 70f to 55f,
@@ -662,23 +766,66 @@ fun EcgWaveform(modifier: Modifier = Modifier) {
             110f to 10f, 115f to 50f, 120f to 40f, 140f to 40f, 145f to 35f,
             150f to 50f, 155f to 40f, 180f to 40f
         )
-
         val path = Path().apply {
             points.forEachIndexed { idx, (x, y) ->
-                val sx = x * scaleX
-                val sy = y * scaleY
+                val sx = x * scaleX; val sy = y * scaleY
                 if (idx == 0) moveTo(sx, sy) else lineTo(sx, sy)
             }
         }
+        drawPath(path, brush = Brush.horizontalGradient(listOf(AurisColors.Red, AurisColors.Red2)),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}
 
-        drawPath(
-            path  = path,
-            brush = Brush.horizontalGradient(listOf(AurisColors.Red, AurisColors.Red2)),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(
-                width = 2.dp.toPx(),
-                cap   = StrokeCap.Round,
-                join  = StrokeJoin.Round
+/* ── MoonArcStat — 220° semicircular arc (moon shape) ───────────── */
+@Composable
+fun MoonArcStat(label: String, value: Int, color: Color) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val stroke = 7.dp.toPx()
+            val inset  = stroke / 2f
+            val rect   = androidx.compose.ui.geometry.Rect(inset, inset, size.width - inset, size.height - inset)
+            val startAngle = 160f   // 220° arc, symmetric about bottom
+            val sweepAngle = 220f
+
+            // Track (background arc)
+            drawArc(
+                color      = Color(0x1A3C3C43),
+                startAngle = startAngle,
+                sweepAngle = sweepAngle,
+                useCenter  = false,
+                topLeft    = rect.topLeft,
+                size       = rect.size,
+                style      = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = stroke, cap = StrokeCap.Round
+                )
             )
-        )
+            // Filled arc proportional to value
+            drawArc(
+                color      = color,
+                startAngle = startAngle,
+                sweepAngle = sweepAngle * (value / 100f),
+                useCenter  = false,
+                topLeft    = rect.topLeft,
+                size       = rect.size,
+                style      = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = stroke, cap = StrokeCap.Round
+                )
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text       = "$value",
+                fontSize   = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color      = color
+            )
+            Text(
+                text       = label,
+                fontSize   = 10.sp,
+                fontWeight = FontWeight.Medium,
+                color      = Color(0xFF8E8E93)
+            )
+        }
     }
 }
