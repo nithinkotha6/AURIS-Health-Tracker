@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -70,10 +71,11 @@ fun ProfileScreen(
         HealthPermission.getReadPermission(SleepSessionRecord::class)
     )
 
-    // HC 1.1.0: use HealthConnectClient.createRequestPermissionResultContract()
+    // PermissionController.createRequestPermissionResultContract() is the HC API
+    // available in the compiled connect-client artifact for this project.
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = HealthConnectClient.createRequestPermissionResultContract()
-    ) { granted: Set<String> ->
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { _: Set<String> ->
         viewModel.refresh()
     }
 
