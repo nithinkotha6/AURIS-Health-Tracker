@@ -14,17 +14,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class HealthConnectPermissionState(
+    /** True when HC is installed and we can attempt permission grant. */
     val isAvailable: Boolean = false,
-    val hasAllPermissions: Boolean = false
+    /** True when isAvailable AND all required permissions are granted. */
+    val hasAllPermissions: Boolean = false,
+    /**
+     * True when HC is installed but an update is required before reading data.
+     * The permission dialog can still be launched to pre-grant permissions.
+     */
+    val needsProviderUpdate: Boolean = false
 )
 
 /**
- * PermissionFlowViewModel — tracks Health Connect availability and permission state.
+ * PermissionFlowViewModel — tracks Health Connect SDK status and permission state.
  *
- * Phase 10:
- * - isAvailable is derived from HealthConnectClient.getSdkStatus() directly,
- *   independent of whether permissions have been granted yet.
- * - hasAllPermissions reflects whether all required permissions have been granted.
+ * Uses getSdkStatus() directly (HC 1.1.0) to distinguish:
+ *   SDK_AVAILABLE                       → isAvailable=true
+ *   SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED → isAvailable=true, needsProviderUpdate=true
+ *   SDK_UNAVAILABLE                     → isAvailable=false
  */
 @HiltViewModel
 class PermissionFlowViewModel @Inject constructor(
@@ -37,14 +44,16 @@ class PermissionFlowViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            // Check SDK availability independently from permissions
             val sdkStatus = kotlin.runCatching {
                 HealthConnectClient.getSdkStatus(context)
             }.getOrDefault(HealthConnectClient.SDK_UNAVAILABLE)
 
-            val isAvailable = sdkStatus == HealthConnectClient.SDK_AVAILABLE
+            val isAvailable = sdkStatus == HealthConnectClient.SDK_AVAILABLE ||
+                    sdkStatus == HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED
 
-            val hasPerms = if (isAvailable) {
+            val needsUpdate = sdkStatus == HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED
+
+            val hasPerms = if (sdkStatus == HealthConnectClient.SDK_AVAILABLE) {
                 kotlin.runCatching {
                     healthConnectRepository.hasAllPermissions()
                 }.getOrDefault(false)
@@ -52,7 +61,8 @@ class PermissionFlowViewModel @Inject constructor(
 
             _state.value = HealthConnectPermissionState(
                 isAvailable = isAvailable,
-                hasAllPermissions = hasPerms
+                hasAllPermissions = hasPerms,
+                needsProviderUpdate = needsUpdate
             )
         }
     }
