@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AURIS</string>
+
+    <!-- Tab labels -->
+    <string name="tab_home">Home</string>
+    <string name="tab_log">Log</string>
+    <string name="tab_diary">Diary</string>
+    <string name="tab_overview">Overview</string>
+    <string name="tab_profile">Profile</string>
+
+    <!-- Deficiency level labels -->
+    <string name="level_optimal">Optimal</string>
+    <string name="level_adequate">Adequate</string>
+    <string name="level_low">Low</string>
+    <string name="level_deficient">Deficient</string>
+    <string name="level_critical">Critical</string>
+
+    <!-- Log screen -->
+    <string name="log_food_hint">Food name</string>
+    <string name="meal_logged">Meal logged!</string>
+</resources>
