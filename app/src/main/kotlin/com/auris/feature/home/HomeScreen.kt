@@ -60,21 +60,22 @@ fun HomeScreen(
     var timeFilter by remember { mutableStateOf("Day") }
 
     // Derive macro display values — dummy defaults until food is logged
-    val proteinGoal  = 150
-    val carbsGoal    = 280
-    val fatGoal      = 65
-    val calorieGoal  = 2500
+    val proteinGoalF = 150f
+    val carbsGoalF   = 280f
+    val fatGoalF     = 65f
+    val calorieGoalF = 2500f
     val burnCalories = (burnData?.activeCalories ?: 0f).toInt()
+    val totalCaloriesF = totalCalories.toFloat()
     // Dummy preview macros: protein=100g, carbs=75g, fat=22g
     val displayProtein = if (totalProtein > 0f) totalProtein else 100f
-    val displayCarbs   = if (totalCalories > 0f) foodLog.map { it.carbsG }.sum() else 75f
-    val displayFat     = if (totalCalories > 0f) foodLog.map { it.fatG }.sum()   else 22f
-    val displayCals    = if (totalCalories > 0f) totalCalories else 1250f
-    val caloriesLeft = (calorieGoal - displayCals.toInt() + burnCalories).coerceAtLeast(0)
-    val proteinPct   = ((displayProtein / proteinGoal.toFloat()) * 100f).toInt().coerceIn(0, 100)
-    val carbsPct     = ((displayCarbs / carbsGoal.toFloat()) * 100f).toInt().coerceIn(0, 100)
-    val fatPct       = ((displayFat / fatGoal.toFloat()) * 100f).toInt().coerceIn(0, 100)
-    val caloriePct   = ((displayCals / calorieGoal.toFloat()) * 100f).toInt().coerceIn(0, 100)
+    val displayCarbs   = if (totalCaloriesF > 0f) foodLog.map { it.carbsG }.sum() else 75f
+    val displayFat     = if (totalCaloriesF > 0f) foodLog.map { it.fatG }.sum()   else 22f
+    val displayCals    = if (totalCaloriesF > 0f) totalCaloriesF else 1250f
+    val caloriesLeft   = (calorieGoalF - displayCals + burnCalories.toFloat()).toInt().coerceAtLeast(0)
+    val proteinPct   = (displayProtein / proteinGoalF * 100f).toInt().coerceIn(0, 100)
+    val carbsPct     = (displayCarbs   / carbsGoalF   * 100f).toInt().coerceIn(0, 100)
+    val fatPct       = (displayFat     / fatGoalF     * 100f).toInt().coerceIn(0, 100)
+    val caloriePct   = (displayCals    / calorieGoalF * 100f).toInt().coerceIn(0, 100)
 
     // ── Dummy preview values (shown until HC delivers real data) ───────
     // Steps: 6,500 / 10,000 = 65%
