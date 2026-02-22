@@ -5,30 +5,15 @@
 
 ---
 
-## Current Status — Phases 1–12 Complete ✅
+## Current Status — Phases 1–12 Under Development 🚧
 
-All core infrastructure, data persistence, Health Connect integration, AI food analysis pipeline, and dashboard UI are implemented and building successfully on `main`.
+All core infrastructure, data persistence, Health Connect integration, AI food analysis pipeline, and dashboard UI are in development state.
+<img width="128" height="285" alt="image" src="https://github.com/user-attachments/assets/10846093-968b-4807-a6bc-048c79553b16" />
+<img width="128" height="285" alt="image" src="https://github.com/user-attachments/assets/08bf822e-05fc-4068-8525-3a0cf2001fba" />
+<img width="128" height="285" alt="image" src="https://github.com/user-attachments/assets/64b17004-0013-459d-ae93-fdb9ab365e01" />
+<img width="128" height="285" alt="image" src="https://github.com/user-attachments/assets/e818fd2b-0dcc-438c-b0b6-1c770e0841d1" />
+<img width="128" height="285" alt="image" src="https://github.com/user-attachments/assets/bbba98d6-135f-4ccc-a280-b9049d5beabf" />
 
----
-
-## Phase Roadmap
-
-| Phase | Status | Description |
-|:---|:---|:---|
-| 1  | ✅ Done | Base UI shell, navigation, Material 3 theme, AurisColors |
-| 2  | ✅ Done | Static vitamin cards, 19 nutrients, RDA values |
-| 3  | ✅ Done | Liquid animations, deficiency colour coding |
-| 4  | ✅ Done | Manual food logging, in-memory state |
-| 5  | ✅ Done | Repository pattern, Fake data layer, reactive StateFlow |
-| 6  | ✅ Done | Room DB v3 + SQLCipher encryption, all DAOs & entities |
-| 7  | ✅ Done | Voice logging via `SpeechRecognizer` → `ParseVoiceInputUseCase` |
-| 8  | ✅ Done | Camera + AI food analysis, `auris://` deep-link, `BuildPromptUseCase` |
-| 9  | ✅ Done | Absorption modifiers, `ApplyBurnAdjustmentsUseCase`, `PredictiveNudgeUseCase` |
-| 10 | ✅ Done | Health Connect integration (steps, sleep, heart rate, weight, calories) |
-| 11 | ✅ Done | Trend charts (`NutrientTrendChart`), habit tracker (`HabitScreen`) |
-| 12 | ✅ Done | Doctor PDF export (`GenerateExportPDFUseCase`), encrypted backup import/export |
-
----
 
 ## Project Structure
 
