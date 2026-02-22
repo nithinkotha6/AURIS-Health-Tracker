@@ -71,10 +71,10 @@ fun HomeScreen(
     val displayFat     = if (totalCalories > 0f) foodLog.map { it.fatG }.sum()   else 22f
     val displayCals    = if (totalCalories > 0f) totalCalories else 1250f
     val caloriesLeft = (calorieGoal - displayCals.toInt() + burnCalories).coerceAtLeast(0)
-    val proteinPct   = ((displayProtein / proteinGoal) * 100).toInt().coerceIn(0, 100)
-    val carbsPct     = ((displayCarbs / carbsGoal) * 100).toInt().coerceIn(0, 100)
-    val fatPct       = ((displayFat / fatGoal) * 100).toInt().coerceIn(0, 100)
-    val caloriePct   = ((displayCals / calorieGoal) * 100).toInt().coerceIn(0, 100)
+    val proteinPct   = ((displayProtein / proteinGoal.toFloat()) * 100f).toInt().coerceIn(0, 100)
+    val carbsPct     = ((displayCarbs / carbsGoal.toFloat()) * 100f).toInt().coerceIn(0, 100)
+    val fatPct       = ((displayFat / fatGoal.toFloat()) * 100f).toInt().coerceIn(0, 100)
+    val caloriePct   = ((displayCals / calorieGoal.toFloat()) * 100f).toInt().coerceIn(0, 100)
 
     // ── Dummy preview values (shown until HC delivers real data) ───────
     // Steps: 6,500 / 10,000 = 65%
@@ -84,7 +84,7 @@ fun HomeScreen(
     // Sleep: 7h 30m
     val sleepHoursRaw = burnData?.sleepHours ?: 7.5f
     val sleepH = sleepHoursRaw.toInt()
-    val sleepM = ((sleepHoursRaw - sleepH) * 60).toInt()
+    val sleepM = ((sleepHoursRaw.toDouble() - sleepH) * 60).toInt()
     val sleepLabel = if (sleepM > 0) "${sleepH}h ${sleepM}m" else "${sleepH}h"
 
     Column(
