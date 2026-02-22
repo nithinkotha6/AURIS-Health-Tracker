@@ -10,6 +10,8 @@ sealed class Screen(val route: String) {
     object Log      : Screen("log")
     object Diary    : Screen("diary")
     object Overview : Screen("overview")
+    object Vitamins : Screen("vitamins")  // Full 19-nutrient list (Phase 11)
+    object Habits   : Screen("habits")    // Habit tracker (Phase 11)
     object Profile  : Screen("profile")
 
     // ── Deep link receiver: AI food log confirmation (Phase 8) ──────────
