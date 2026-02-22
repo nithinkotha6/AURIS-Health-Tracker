@@ -80,8 +80,8 @@ fun AurisBottomNav(
                 // Vitamins
                 NavTabItem(
                     label = "Vitamins", icon = Icons.Outlined.BarChart,
-                    isActive = currentRoute == Screen.Overview.route,
-                    onClick = { onTabSelected(AurisTab("Vitamins", Screen.Overview.route)) },
+                    isActive = currentRoute == Screen.Vitamins.route || currentRoute == Screen.Overview.route,
+                    onClick = { onTabSelected(AurisTab("Vitamins", Screen.Vitamins.route)) },
                     modifier = Modifier.weight(1f)
                 )
 

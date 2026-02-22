@@ -1,9 +1,12 @@
 package com.auris.feature.profile
 
+import android.content.Context
+import androidx.health.connect.client.HealthConnectClient
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auris.domain.repository.HealthConnectRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,12 +22,13 @@ data class HealthConnectPermissionState(
  * PermissionFlowViewModel — tracks Health Connect availability and permission state.
  *
  * Phase 10:
- * - Used by Profile screen to show a simple toggle for Health Connect sync.
- * - Actual permission request is driven by the UI via ActivityResult APIs;
- *   this ViewModel only reflects current state.
+ * - isAvailable is derived from HealthConnectClient.getSdkStatus() directly,
+ *   independent of whether permissions have been granted yet.
+ * - hasAllPermissions reflects whether all required permissions have been granted.
  */
 @HiltViewModel
 class PermissionFlowViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val healthConnectRepository: HealthConnectRepository
 ) : ViewModel() {
 
@@ -33,19 +37,23 @@ class PermissionFlowViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            val sdkAvailable = kotlin.runCatching {
-                healthConnectRepository.hasAllPermissions() || healthConnectRepository.readTodayBurnData() != null
-            }.getOrDefault(false)
+            // Check SDK availability independently from permissions
+            val sdkStatus = kotlin.runCatching {
+                HealthConnectClient.getSdkStatus(context)
+            }.getOrDefault(HealthConnectClient.SDK_UNAVAILABLE)
 
-            val hasPerms = kotlin.runCatching {
-                healthConnectRepository.hasAllPermissions()
-            }.getOrDefault(false)
+            val isAvailable = sdkStatus == HealthConnectClient.SDK_AVAILABLE
+
+            val hasPerms = if (isAvailable) {
+                kotlin.runCatching {
+                    healthConnectRepository.hasAllPermissions()
+                }.getOrDefault(false)
+            } else false
 
             _state.value = HealthConnectPermissionState(
-                isAvailable = sdkAvailable,
+                isAvailable = isAvailable,
                 hasAllPermissions = hasPerms
             )
         }
     }
 }
-

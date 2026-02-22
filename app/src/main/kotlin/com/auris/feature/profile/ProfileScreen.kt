@@ -1,16 +1,15 @@
 package com.auris.feature.profile
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -31,14 +30,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.auris.ui.theme.AurisColors
 import kotlinx.coroutines.flow.collectLatest
@@ -56,22 +57,23 @@ fun ProfileScreen(
     viewModel: PermissionFlowViewModel = hiltViewModel(),
     profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    // Health Connect permission launcher
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        // After the user returns from the permission screen, refresh state.
-        viewModel.refresh()
-    }
 
     val requiredPermissions = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class)
     )
+
+    // Use Health Connect's own permission contract — required for HC permissions to work
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = HealthConnectClient.createRequestPermissionResultContract()
+    ) {
+        // After the user returns from HC permission screen, refresh state.
+        viewModel.refresh()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -141,10 +143,9 @@ fun ProfileScreen(
                         enabled = state.isAvailable,
                         onCheckedChange = { checked ->
                             if (checked && state.isAvailable) {
-                                // Launch Health Connect system permission UI.
-                                permissionLauncher.launch(requiredPermissions.toTypedArray())
+                                // Launch Health Connect's own permission UI
+                                permissionLauncher.launch(requiredPermissions)
                             } else {
-                                // Revocation is done from system settings; just refresh.
                                 viewModel.refresh()
                             }
                         }
@@ -161,13 +162,32 @@ fun ProfileScreen(
                             contentDescription = null,
                             tint = AurisColors.Red
                         )
-                        Spacer(modifier = Modifier.height(0.dp))
                         Text(
-                            text = "Install Health Connect to unlock burn-adjusted RDAs.",
+                            text = "Install Health Connect to sync Fitbit and burn-adjusted RDAs.",
                             style = MaterialTheme.typography.bodySmall,
                             color = AurisColors.LabelTertiary,
                             modifier = Modifier.padding(start = 6.dp)
                         )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            // Open Health Connect on Play Store to install / open
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                data = Uri.parse("market://details?id=com.google.android.apps.healthdata")
+                                setPackage("com.android.vending")
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW,
+                                        Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata"))
+                                )
+                            }
+                        },
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text("Get Health Connect")
                     }
                 }
             }
@@ -207,7 +227,7 @@ fun ProfileScreen(
                     color = AurisColors.LabelPrimary
                 )
                 Text(
-                    text = "Save or restore your data (Phase 12 stub).",
+                    text = "Save or restore your data as a local file.",
                     style = MaterialTheme.typography.bodySmall,
                     color = AurisColors.LabelSecondary
                 )
