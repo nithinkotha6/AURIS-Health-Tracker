@@ -7,6 +7,7 @@ import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.time.TimeRangeFilter
 import com.auris.domain.repository.HealthConnectRepository
 import com.auris.domain.usecase.ApplyBurnAdjustmentsUseCase
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -70,7 +71,7 @@ class HealthConnectRepositoryImpl @Inject constructor(
         val startOfDay: ZonedDateTime = now.toLocalDate().atStartOfDay(zoneId)
         val startInstant: Instant = startOfDay.toInstant()
         val endInstant: Instant = now.toInstant()
-        val todayRange = ReadRecordsRequest.TimeRangeFilter.between(startInstant, endInstant)
+        val todayRange = TimeRangeFilter.between(startInstant, endInstant)
 
         // 4) Steps
         val stepsResponse = client.readRecords(
@@ -111,7 +112,7 @@ class HealthConnectRepositoryImpl @Inject constructor(
             .withSecond(0).withNano(0)
         val todayNoon = now.withHour(12).withMinute(0).withSecond(0).withNano(0)
 
-        val range = ReadRecordsRequest.TimeRangeFilter.between(
+        val range = TimeRangeFilter.between(
             yesterdayEvening.toInstant(),
             todayNoon.toInstant()
         )

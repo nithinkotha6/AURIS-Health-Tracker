@@ -3,6 +3,7 @@ package com.auris.data.repository
 import com.auris.domain.model.VitaminStatus
 import com.auris.domain.repository.FoodRepository
 import com.auris.domain.repository.VitaminRepository
+import com.auris.domain.usecase.ApplyBurnAdjustmentsUseCase
 import com.auris.domain.usecase.CalcVitaminStatusUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,11 +51,10 @@ class FakeVitaminRepositoryImpl @Inject constructor(
     override fun getTodayVitaminStatus(): Flow<List<VitaminStatus>> =
         _todayStatus.asStateFlow()
 
-    override fun recalculate() {
-        scope.launch {
-            val foods = foodRepository.getTodayFoodLog().first()
-            _todayStatus.value = calcVitaminStatus(foods)
-        }
+    override suspend fun recalculate(burn: ApplyBurnAdjustmentsUseCase.BurnData?) {
+        // FakeImpl: burn data is ignored — always recalculates from food log only
+        val foods = foodRepository.getTodayFoodLog().first()
+        _todayStatus.value = calcVitaminStatus(foods)
     }
 
     override fun getVitaminStatusByDate(date: LocalDate): Flow<List<VitaminStatus>> {
