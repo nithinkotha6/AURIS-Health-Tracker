@@ -429,6 +429,7 @@ fun HomeScreen(
                 Text("Water", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                     color = AurisColors.LabelSecondary)
             }
+        }
 
         Spacer(Modifier.height(16.dp))
 
