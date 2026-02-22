@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        AURIS app theme — Apple iOS 17 light mode
+        Compose handles all surface colors; this XML only sets
+        system bar transparency and light-mode status bar icons.
+    -->
+    <style name="Theme.Auris" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Transparent bars for edge-to-edge -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <!-- Light status bar icons (dark icons on light bg) -->
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.AURISAPP" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
