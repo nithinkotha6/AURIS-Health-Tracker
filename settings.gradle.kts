@@ -18,5 +18,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "AURIS"
 include(":app")
-include(":app")
- 

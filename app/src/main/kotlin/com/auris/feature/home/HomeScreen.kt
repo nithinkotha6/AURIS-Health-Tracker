@@ -466,6 +466,9 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.weight(1f)
                 ) {
+                    val proteinGoal  = 150
+    val carbsGoal    = 280
+    val fatGoal      = 65
                     listOf(
                         Triple("Protein", Pair("${displayProtein.toInt()}g", "${proteinGoal}g"),  Pair(proteinPct, AurisColors.Blue)),
                         Triple("Carbs",   Pair("${displayCarbs.toInt()}g", "${carbsGoal}g"), Pair(carbsPct, AurisColors.Green)),

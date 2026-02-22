@@ -107,7 +107,7 @@ class HealthConnectRepositoryImpl @Inject constructor(
         client: HealthConnectClient,
         now: ZonedDateTime
     ): Float? {
-        // Define "last night" as the sleep period between yesterday 18:00 and today 12:00.
+        // Define \"last night\" as the sleep period between yesterday 18:00 and today 12:00.
         val yesterdayEvening = now.minusDays(1).withHour(18).withMinute(0)
             .withSecond(0).withNano(0)
         val todayNoon = now.withHour(12).withMinute(0).withSecond(0).withNano(0)

@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace  = "com.auris"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId   = "com.auris"
         minSdk          = 26
-        targetSdk       = 35
+        targetSdk       = 36
         versionCode     = 1
         versionName     = "1.0.0"
 
