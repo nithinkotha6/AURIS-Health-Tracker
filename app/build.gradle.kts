@@ -103,32 +103,35 @@ dependencies {
     // ── DataStore ─────────────────────────────────────────────────────
     implementation(libs.datastore.preferences)
 
+    // ── Guava ─────────────────────────────────────────────────────────
+    implementation(libs.guava)
+
     // ── Serialization + Coroutines ────────────────────────────────────
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
     // ── Logging ───────────────────────────────────────────────────────
     implementation(libs.timber)
+
+    // ── Phase 7/8  — CameraX + image compressor ─────────────────────
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
+    implementation(libs.compressor)
+
+    // ── Phase 9   — Hilt WorkManager integration ──────────────────────
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.compiler)
 
     // ══ FUTURE PHASE DEPENDENCIES (uncomment when needed) ════════════
     //
     // Phase 6  — SQLCipher
     // implementation(libs.sqlcipher)
     //
-    // Phase 7  — CameraX + image compressor
-    // implementation(libs.camera.camera2)
-    // implementation(libs.camera.lifecycle)
-    // implementation(libs.camera.view)
-    // implementation(libs.compressor)
-    //
     // Phase 10 — Health Connect
-    // implementation(libs.health.connect)
+    implementation(libs.health.connect)
     //
     // Phase 11 — Vico trend charts
-    // implementation(libs.vico.compose.m3)
-    //
-    // Phase 12 — PDF export (add iText7 Maven repo to settings.gradle.kts first)
-    // Hilt WorkManager integration
-    // implementation(libs.hilt.work)
-    // ksp(libs.hilt.compiler)
+    implementation(libs.vico.compose.m3)
 }

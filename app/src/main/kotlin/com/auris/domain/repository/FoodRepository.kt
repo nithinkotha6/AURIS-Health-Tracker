@@ -5,20 +5,22 @@ import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 /**
- * FoodRepository — provides reactive access to the food log.
+ * FoodRepository — single source of truth for food logging.
  *
- * Phase 4: implemented in-memory inside [LogViewModel].
- * Phase 5: extracted here and consumed by [FakeVitaminRepositoryImpl].
- * Phase 6: implemented by [RoomFoodRepositoryImpl] backed by Room.
+ * Phase 5: backed by in-memory fake.
+ * Phase 6: backed by Room DB.
  */
 interface FoodRepository {
 
-    /** Flow of all food entries logged for today. */
+    /** Persist a food item to today's log. */
+    suspend fun logFood(item: ParsedFoodItem)
+
+    /** Reactive stream of today's food entries. */
     fun getTodayFoodLog(): Flow<List<ParsedFoodItem>>
 
-    /** Flow of all food entries logged for a specific [date]. */
+    /** Reactive stream of food entries for a specific date. */
     fun getFoodLogByDate(date: LocalDate): Flow<List<ParsedFoodItem>>
 
-    /** Persist a new [item] to today's log. */
-    suspend fun logFood(item: ParsedFoodItem)
+    /** Remove a specific food entry by its id. */
+    suspend fun deleteFood(id: String)
 }

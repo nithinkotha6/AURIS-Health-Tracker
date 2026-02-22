@@ -6,22 +6,28 @@ import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 /**
- * VitaminRepository — provides reactive streams of computed vitamin status.
+ * VitaminRepository — single source of truth for daily vitamin status.
  *
- * Phase 5: implemented by [FakeVitaminRepositoryImpl] (in-memory).
- * Phase 6: implemented by [RoomVitaminRepositoryImpl] (Room/SQLite).
+ * Phase 5: backed by in-memory fake (reacts to FoodRepository changes).
+ * Phase 6: backed by Room DB (VitaminLogEntity).
+ * Phase 10: optionally accepts Health Connect burn data when recalculating.
  */
 interface VitaminRepository {
 
-    /** Flow of today's vitamin status, recalculated whenever the food log changes. */
+    /** Reactive stream of today's vitamin status for all 19 nutrients. */
     fun getTodayVitaminStatus(): Flow<List<VitaminStatus>>
 
     /**
-     * Force a recalculation with an optional burn adjustment.
-     * @param burn optional workout / cardio burn data to apply absorption modifiers.
+     * Recalculate today's vitamin status from current food log.
+     *
+     * @param burn Optional burn data from Health Connect; when null,
+     *             RDAs remain unmodified.
      */
-    suspend fun recalculate(burn: ApplyBurnAdjustmentsUseCase.BurnData? = null)
+    suspend fun recalculate(
+        burn: ApplyBurnAdjustmentsUseCase.BurnData? = null
+    )
 
-    /** Historical vitamin status for a specific [date]. */
+    /** Reactive stream of vitamin status for a specific date. */
     fun getVitaminStatusByDate(date: LocalDate): Flow<List<VitaminStatus>>
 }
+
