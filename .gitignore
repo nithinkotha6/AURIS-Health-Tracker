@@ -22,3 +22,5 @@ java_pid*.hprof
 local.properties
 gradle.properties
 gradle/gradle-daemon-jvm.properties
+# Java heap dumps
+*.hprof
